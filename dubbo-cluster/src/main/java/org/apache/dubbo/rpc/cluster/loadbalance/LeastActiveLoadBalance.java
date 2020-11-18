@@ -33,7 +33,15 @@ import java.util.concurrent.ThreadLocalRandom;
  * if there are multiple invokers and the same weight, then randomly called.
  */
 public class LeastActiveLoadBalance extends AbstractLoadBalance {
-
+    /**
+     * 最少活跃调用数算法的思想就是
+     * "活跃调用数越少，证明服务效率越高，单位时间内可以处理的请求就越多"。
+     * 每一个服务提供者对应一个active，初始值都是0，
+     * 每增加一次请求就+1，每完成一次请求就-1。
+     * 在服务运行一段时间之后，性能越好的服务的active就越小，处理请求的速度就越快，
+     * 所以获得新请求的机会就越大，这就是最少活跃数负载均衡算法的基本思想
+     *
+     */
     public static final String NAME = "leastactive";
 
     @Override

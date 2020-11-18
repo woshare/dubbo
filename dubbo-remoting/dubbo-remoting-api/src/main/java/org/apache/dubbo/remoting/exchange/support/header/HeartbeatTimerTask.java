@@ -41,7 +41,7 @@ public class HeartbeatTimerTask extends AbstractTimerTask {
 
     @Override
     protected void doTask(Channel channel) {
-        try {
+        try {//最后读，或最后写的的时间间隔大于heartbeat，就会发送心跳，默认60秒
             Long lastRead = lastRead(channel);
             Long lastWrite = lastWrite(channel);
             if ((lastRead != null && now() - lastRead > heartbeat)

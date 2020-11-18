@@ -47,7 +47,7 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     private final Client client;
     private final ExchangeChannel channel;
-
+    //Netty提供的一个时间轮定时器，在任务非常多，并且任务执行时间很短的情况下，HashedWheelTimer比Schedule性能更好，特别适合心跳检测
     private static final HashedWheelTimer IDLE_CHECK_TIMER = new HashedWheelTimer(
             new NamedThreadFactory("dubbo-client-idleCheck", true), 1, TimeUnit.SECONDS, TICKS_PER_WHEEL);
     private HeartbeatTimerTask heartBeatTimerTask;
@@ -57,7 +57,7 @@ public class HeaderExchangeClient implements ExchangeClient {
         Assert.notNull(client, "Client can't be null");
         this.client = client;
         this.channel = new HeaderExchangeChannel(client);
-
+        // 如果判定为超时，客户端处理的逻辑是重连，服务端则采取断连的措施。
         if (startTimer) {
             URL url = client.getUrl();
             startReconnectTask(url);
@@ -189,7 +189,7 @@ public class HeaderExchangeClient implements ExchangeClient {
     private void startHeartBeatTask(URL url) {
         if (!client.canHandleIdle()) {
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
-            int heartbeat = getHeartbeat(url);
+            int heartbeat = getHeartbeat(url);//默认60秒
             long heartbeatTick = calculateLeastDuration(heartbeat);
             this.heartBeatTimerTask = new HeartbeatTimerTask(cp, heartbeatTick, heartbeat);
             IDLE_CHECK_TIMER.newTimeout(heartBeatTimerTask, heartbeatTick, TimeUnit.MILLISECONDS);
@@ -199,7 +199,7 @@ public class HeaderExchangeClient implements ExchangeClient {
     private void startReconnectTask(URL url) {
         if (shouldReconnect(url)) {
             AbstractTimerTask.ChannelProvider cp = () -> Collections.singletonList(HeaderExchangeClient.this);
-            int idleTimeout = getIdleTimeout(url);
+            int idleTimeout = getIdleTimeout(url);//默认3倍的heartbeat的时间
             long heartbeatTimeoutTick = calculateLeastDuration(idleTimeout);
             this.reconnectTimerTask = new ReconnectTimerTask(cp, heartbeatTimeoutTick, idleTimeout);
             IDLE_CHECK_TIMER.newTimeout(reconnectTimerTask, heartbeatTimeoutTick, TimeUnit.MILLISECONDS);

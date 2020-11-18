@@ -87,7 +87,7 @@ public class Main {
             }
 
             for (Container container : containers) {
-                container.start();
+                container.start();//参照package org.apache.dubbo.container.spring，利用了spring的启动
                 logger.info("Dubbo " + container.getClass().getSimpleName() + " started!");
             }
             System.out.println(new SimpleDateFormat("[yyyy-MM-dd HH:mm:ss]").format(new Date()) + " Dubbo service server started!");

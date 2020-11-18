@@ -30,7 +30,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  * The container class implementation for Spring
  */
 public class SpringContainer implements Container {
-
+    //结合spring的初始化，利用了spring的启动
     public static final String SPRING_CONFIG = "dubbo.spring.config";
     public static final String DEFAULT_SPRING_CONFIG = "classpath*:META-INF/spring/*.xml";
     private static final Logger logger = LoggerFactory.getLogger(SpringContainer.class);

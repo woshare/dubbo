@@ -71,6 +71,7 @@ public class RandomLoadBalance extends AbstractLoadBalance {
             int offset = ThreadLocalRandom.current().nextInt(totalWeight);
             // Return a invoker based on the random value.
             for (int i = 0; i < length; i++) {
+                //A 10 B 20 C 30 D 40，既A[0,10],B(10,30],C,(30,60],D(60,100]  随机得到offset=15，则在B区间
                 offset -= weights[i];
                 if (offset < 0) {
                     return invokers.get(i);

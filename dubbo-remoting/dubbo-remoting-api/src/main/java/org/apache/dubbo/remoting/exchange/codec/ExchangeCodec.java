@@ -45,7 +45,17 @@ import java.io.InputStream;
  * ExchangeCodec.
  */
 public class ExchangeCodec extends TelnetCodec {
-
+    /**
+     * HEADER_LENGTH ：协议头部长度，共16个字节。
+     * MAGIC ：魔数，固定为0xdabb，2个字节。
+     * MAGIC_HIGH ：魔数的高8位。
+     * MAGIC_LOW  ：魔数的低8位。
+     * FLAG_REQUEST ：消息请求类型为消息请求。
+     * FLAG_TWOWAY  ：消息请求类型为心跳。
+     * FLAG_EVENT       ：消息请求类型为事件。
+     * SERIALIZATION_MASK ：serialization掩码。
+     *
+     */
     // header length.
     protected static final int HEADER_LENGTH = 16;
     // magic header.
