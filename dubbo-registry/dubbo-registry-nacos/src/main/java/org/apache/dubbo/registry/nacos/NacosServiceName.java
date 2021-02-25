@@ -65,6 +65,16 @@ public class NacosServiceName {
     public NacosServiceName() {
     }
 
+    /**
+     * metaData 举例：
+     * dubbo.metadata-service.urls=[ "dubbo://10.3.246.135:20880/com.alibaba.cloud.dubbo.service.DubboMetadataService?anyhost=true&application=wsgate-service&bind.ip=10.3.246.135&bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&group=wsgate-service&heartbeat=10000&interface=com.alibaba.cloud.dubbo.service.DubboMetadataService&methods=getAllServiceKeys,getServiceRestMetadata,getExportedURLs,getAllExportedURLs&payload=10485760&pid=29065&qos.enable=false&release=2.7.4.1&revision=2.2.0.RELEASE&side=provider&timestamp=1602659732415&version=1.0.0" ]
+     *
+     * dubbo.protocols.dubbo.port=20880
+     *
+     * preserved.register.source=SPRING_CLOUD
+     *
+     * @param url
+     */
     public NacosServiceName(URL url) {
         serviceInterface = url.getParameter(INTERFACE_KEY);
         category = isConcrete(serviceInterface) ? DEFAULT_CATEGORY : url.getParameter(CATEGORY_KEY);

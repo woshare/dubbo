@@ -76,7 +76,8 @@ import static org.apache.dubbo.registry.nacos.NacosServiceName.valueOf;
  * @since 2.6.5
  */
 public class NacosRegistry extends FailbackRegistry {
-
+//FailbackRegistry这个类其实是为AbstractRegistry增加了失败重试的机制作为抽象能力，
+// 后面不同的注册中心具体实现继承了这个类就可以直接使用这个能力
     /**
      * All supported categories
      */
@@ -574,6 +575,28 @@ public class NacosRegistry extends FailbackRegistry {
         return getServiceName(url, url.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY));
     }
 
+    /**
+     *  String CATEGORY_KEY = "category";
+     *
+     *  String PROVIDERS_CATEGORY = "providers";
+     *
+     *     String CONSUMERS_CATEGORY = "consumers";
+     *
+     *     String ROUTERS_CATEGORY = "routers";
+     *
+     *     String DYNAMIC_ROUTERS_CATEGORY = "dynamicrouters";
+     *
+     *     String DEFAULT_CATEGORY = PROVIDERS_CATEGORY;
+     *
+     *     String CONFIGURATORS_CATEGORY = "configurators";
+     *
+     *     String DYNAMIC_CONFIGURATORS_CATEGORY = "dynamicconfigurators";
+     *
+     *     String APP_DYNAMIC_CONFIGURATORS_CATEGORY = "appdynamicconfigurators";
+     * @param url
+     * @param category
+     * @return
+     */
     private String getServiceName(URL url, String category) {
         return category + SERVICE_NAME_SEPARATOR + url.getColonSeparatedKey();
     }

@@ -46,7 +46,8 @@ import static org.apache.dubbo.registry.Constants.REGISTRY_RETRY_PERIOD_KEY;
  * FailbackRegistry. (SPI, Prototype, ThreadSafe)
  */
 public abstract class FailbackRegistry extends AbstractRegistry {
-
+//FailbackRegistry这个类其实是为AbstractRegistry增加了失败重试的机制作为抽象能力，
+// 后面不同的注册中心具体实现继承了这个类就可以直接使用这个能力
     /*  retry task map */
 
     private final ConcurrentMap<URL, FailedRegisteredTask> failedRegistered = new ConcurrentHashMap<URL, FailedRegisteredTask>();

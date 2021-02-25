@@ -80,21 +80,31 @@ public abstract class AbstractRegistry implements Registry {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     // Local disk cache, where the special key value.registries records the list of registry centers, and the others are the list of notified service providers
     private final Properties properties = new Properties();
-    // File cache timing writing
+    // File cache timing writing // 文件缓存写入执行器 提供一个线程的线程池
     private final ExecutorService registryCacheExecutor = Executors.newFixedThreadPool(1, new NamedThreadFactory("DubboSaveRegistryCache", true));
     // Is it synchronized to save the file
     private boolean syncSaveFile;
+    //缓存版本号
     private final AtomicLong lastCacheChanged = new AtomicLong();
     private final AtomicInteger savePropertiesRetryTimes = new AtomicInteger();
+    // 这个是已经注册的URL集合，不仅仅是服务提供者的，也可以是服务消费者的
     private final Set<URL> registered = new ConcurrentHashSet<>();
+    // 已订阅的url 值为url的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<>();
+    // 消费者或服务治理服务获取注册信息后的缓存对象
+    // 内存中服务器缓存的notified对象是ConcurrentHashMap里面嵌套了一个Map，
+    // 外层Map的Key是消费者的URL，
+    // 内层的Map的key是分类，包括provider，consumer，routes，configurators四种，
+    // value则对应服务列表，没有服务提供者提供服务的URL，会以一个特别的empty://前缀开头
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<>();
+
+    //注册中心的url
     private URL registryUrl;
     // Local disk cache file
     private File file;
 
     public AbstractRegistry(URL url) {
-        setUrl(url);
+        setUrl(url);//set registryUrl
         if (url.getParameter(REGISTRY__LOCAL_FILE_CACHE_ENABLED, true)) {
             // Start file save timer
             syncSaveFile = url.getParameter(REGISTRY_FILESAVE_SYNC_KEY, false);
@@ -145,7 +155,7 @@ public abstract class AbstractRegistry implements Registry {
     public Map<URL, Set<NotifyListener>> getSubscribed() {
         return Collections.unmodifiableMap(subscribed);
     }
-
+    //Collections.unmodifiableMap 返回不可修改的map，只要put元素，就报错
     public Map<URL, Map<String, List<URL>>> getNotified() {
         return Collections.unmodifiableMap(notified);
     }
@@ -264,8 +274,21 @@ public abstract class AbstractRegistry implements Registry {
                 }
             }
         } else {
+            //这一段应该是为了保持原子性，但是还没看懂
             final AtomicReference<List<URL>> reference = new AtomicReference<>();
+            //哦，懂了，是把NotifyListener.notify(List<URL> urls)=reference::set;
+            /** 等同如下，至于为何可以这样写，还不太清楚
+             * // 通知监听器。当收到服务变更通知时触发
+             *             NotifyListener listener = new NotifyListener() {
+             *                 @Override
+             *                 public void notify(List<URL> urls) {
+             *                     reference.set(urls);
+             *                 }
+             *             };
+             *
+             */
             NotifyListener listener = reference::set;
+            //// 添加这个服务的监听器，订阅？
             subscribe(url, listener); // Subscribe logic guarantees the first notify to return
             List<URL> urls = reference.get();
             if (CollectionUtils.isNotEmpty(urls)) {
@@ -314,6 +337,10 @@ public abstract class AbstractRegistry implements Registry {
         }
         Set<NotifyListener> listeners = subscribed.computeIfAbsent(url, n -> new ConcurrentHashSet<>());
         listeners.add(listener);
+        //ConcurrentMap<URL, Set<NotifyListener>> subscribed   : url->set[listener],
+        //  NotifyListener listener = reference::set;实质是 listener.notify=reference.set(urls), //这种写法，有点不太清楚这个reference 的有效作用域
+        // final AtomicReference<List<URL>> reference = new AtomicReference<List<URL>>();
+
     }
 
     @Override
@@ -333,6 +360,7 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    //注册中心的连接断开后恢复时调用的方法，里面其实就是注册和订阅
     protected void recover() throws Exception {
         // register
         Set<URL> recoverRegistered = new HashSet<>(getRegistered());
@@ -363,7 +391,7 @@ public abstract class AbstractRegistry implements Registry {
         if (CollectionUtils.isEmpty(urls)) {
             return;
         }
-
+        //subscribed   : url->set[listener]
         for (Map.Entry<URL, Set<NotifyListener>> entry : getSubscribed().entrySet()) {
             URL url = entry.getKey();
 
@@ -375,6 +403,7 @@ public abstract class AbstractRegistry implements Registry {
             if (listeners != null) {
                 for (NotifyListener listener : listeners) {
                     try {
+                        // 通知监听器，看下方代码注释
                         notify(url, listener, filterEmpty(url, urls));
                     } catch (Throwable t) {
                         logger.error("Failed to notify registry event, urls: " + urls + ", cause: " + t.getMessage(), t);
