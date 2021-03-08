@@ -41,6 +41,15 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
      * 在服务运行一段时间之后，性能越好的服务的active就越小，处理请求的速度就越快，
      * 所以获得新请求的机会就越大，这就是最少活跃数负载均衡算法的基本思想
      *
+     *
+     * https://dubbo.apache.org/zh/docs/v2.7/dev/source/loadbalance/
+     * ### 基于最少活跃调用数算法的 LeastActiveLoadBalance
+     * >1，活跃调用数越小，表明该服务提供者效率越高，单位时间内可处理更多的请求。此时应优先将请求分配给该服务提供者。
+     * >2，在具体实现中，每个服务提供者对应一个活跃数 active。初始情况下，所有服务提供者活跃数均为0。
+     * >3，每收到一个请求，活跃数加1，完成请求后则将活跃数减1。
+     * >4，在服务运行一段时间后，性能好的服务提供者处理请求的速度更快，因此活跃数下降的也越快，此时这样的服务提供者能够优先获取到新的服务请求、这就是最小活跃数负载均衡算法的基本思想。除了最小活跃数，LeastActiveLoadBalance 在实现上还引入了权重值。
+     * >5，所以准确的来说，LeastActiveLoadBalance 是基于加权最小活跃数算法实现的。
+     * 举个例子说明一下，在一个服务提供者集群中，有两个性能优异的服务提供者。某一时刻它们的活跃数相同，此时 Dubbo 会根据它们的权重去分配请求，权重越大，获取到新请求的概率就越大。如果两个服务提供者权重相同，此时随机选择一个即可
      */
     public static final String NAME = "leastactive";
 
@@ -49,18 +58,21 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
         // Number of invokers
         int length = invokers.size();
         // The least active value of all invokers
-        int leastActive = -1;
+        int leastActive = -1;// 最小的活跃数
         // The number of invokers having the same least active value (leastActive)
-        int leastCount = 0;
+        int leastCount = 0; // 具有相同“最小活跃数”的服务者提供者（以下用 Invoker 代称）数
         // The index of invokers having the same least active value (leastActive)
+        //用于记录具有相同“最小活跃数”的 Invoker 在 invokers 列表中的下标信息
         int[] leastIndexes = new int[length];
         // the weight of every invokers
         int[] weights = new int[length];
         // The sum of the warmup weights of all the least active invokers
         int totalWeight = 0;
         // The weight of the first least active invoker
+        // 第一个最小活跃数的 Invoker 权重值，用于与其他具有相同最小活跃数的 Invoker 的权重进行对比，
         int firstWeight = 0;
         // Every least active invoker has the same weight value?
+        // 以检测是否“所有具有相同最小活跃数的 Invoker 的权重”均相等
         boolean sameWeight = true;
 
 
@@ -68,13 +80,15 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
         for (int i = 0; i < length; i++) {
             Invoker<T> invoker = invokers.get(i);
             // Get the active number of the invoker
+            // 获取 Invoker 对应的活跃数
+            //每个服务提供者对应一个活跃数 active。初始情况下，所有服务提供者活跃数均为0
             int active = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName()).getActive();
             // Get the weight of the invoker's configuration. The default value is 100.
             int afterWarmup = getWeight(invoker, invocation);
             // save for later use
             weights[i] = afterWarmup;
             // If it is the first invoker or the active number of the invoker is less than the current least active number
-            if (leastActive == -1 || active < leastActive) {
+            if (leastActive == -1 || active < leastActive) {// 发现更小的活跃数，重新开始
                 // Reset the active number of the current invoker to the least active number
                 leastActive = active;
                 // Reset the number of least active invokers
@@ -88,7 +102,7 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
                 // Each invoke has the same weight (only one invoker here)
                 sameWeight = true;
                 // If current invoker's active value equals with leaseActive, then accumulating.
-            } else if (active == leastActive) {
+            } else if (active == leastActive) {// 当前 Invoker 的活跃数 active 与最小活跃数 leastActive 相同
                 // Record the index of the least active invoker in leastIndexes order
                 leastIndexes[leastCount++] = i;
                 // Accumulate the total weight of the least active invoker
@@ -110,7 +124,7 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
             int offsetWeight = ThreadLocalRandom.current().nextInt(totalWeight);
             // Return a invoker based on the random value.
             for (int i = 0; i < leastCount; i++) {
-                int leastIndex = leastIndexes[i];
+                int leastIndex = leastIndexes[i];//记录了有最小活跃的invoker的下标，当有多个的时候，则按权重，这个地方可以先理解RandomLoadBalance算法
                 offsetWeight -= weights[leastIndex];
                 if (offsetWeight < 0) {
                     return invokers.get(leastIndex);

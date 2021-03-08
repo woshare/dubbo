@@ -114,10 +114,14 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         }
 
         private Invoker<T> selectForKey(long hash) {
+            // 到 TreeMap 中查找第一个节点值大于或等于当前 hash 的 Invoker
             Map.Entry<Long, Invoker<T>> entry = virtualInvokers.ceilingEntry(hash);
+            // 如果 hash 大于 Invoker 在圆环上最大的位置，此时 entry = null，
+            // 需要将 TreeMap 的头节点赋值给 entry
             if (entry == null) {
                 entry = virtualInvokers.firstEntry();
             }
+            // 返回 Invoker
             return entry.getValue();
         }
 
